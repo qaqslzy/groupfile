@@ -1,3 +1,5 @@
+__author__ = 'liuweiyi'
+__time__ = '2021/12/23'
 import groupfile
 from byteview import ByteView
 from sinks import ByteViewSink
@@ -23,7 +25,7 @@ def FileDeleter(ctx, key):
 
 if __name__ == '__main__':
     peers_addrs = ["127.0.0.1:8001", "127.0.0.1:8002"]
-    peers, server = tcp.NewTCPPool('127.0.0.1:8001')
+    peers, server = tcp.NewTCPPool('127.0.0.1:8002')
     peers.Set(*peers_addrs)
 
     groupfile.NewGroup(
@@ -33,6 +35,7 @@ if __name__ == '__main__':
         adder=FileAdder,
         deleter=FileDeleter
     )
+
     try:
         server.serve_forever()
     except:

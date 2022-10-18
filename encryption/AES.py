@@ -253,9 +253,22 @@ def getK():
     K = numpy.array(K)
     return K.reshape(4, 4)
 
+def strToKey(str):
+    K = []
+    for i in range(16):
+        K.append(ord(str[i]))
+    K = numpy.array(K)
+    return K.reshape(4, 4)
+
+
+def keyToStr(K):
+    k = K.reshape(1, -1)[0]
+    res = [chr(i) for i in k]
+    return "".join(res)
+
 
 if __name__ == '__main__':
-    aes = AES()
+    aes = myAES()
     M = [
         [0x12, 0x13, 0x14, 0x15],
         [0x12, 0x13, 0x14, 0x15],
@@ -265,8 +278,17 @@ if __name__ == '__main__':
     M = numpy.array(M)
     print("M", M)
 
-    K = getK()
+    k = "helloworld!12345"
+    K = strToKey(k)
     print("K", K)
+
+    str = keyToStr(K)
+    print(str)
+
+    # str = "asdasdasdasdasdm"
+    k = strToKey(str)
+    print(k)
+
 
     M = aes.encode(M, K)
     print("MM", M)

@@ -1,9 +1,6 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/11'
-
 
 class ByteView:
-    def __init__(self, b=[], s=''):
+    def __init__(self, b=bytes(), s=''):
         self.b = b
         self.s = s
 
@@ -18,11 +15,11 @@ class ByteView:
     def ByteSlice(self):
         if self.b:
             return self.b[:]
-        return list(self.s)
+        return bytes(self.s, 'utf-8')
 
     def String(self):
         if self.b:
-            return str(self.b)
+            return bytes.decode(self.b)
         return self.s
 
     def At(self, i):
@@ -32,18 +29,13 @@ class ByteView:
 
     def Slice(self, f, t):
         if self.b:
-            return ByteView(self.b[f:t])
+            return ByteView(b=self.b[f:t])
         return ByteView(s=self.s[f:t])
 
     def SliceFrom(self, f):
         if self.b:
-            return ByteView(self.b[f:])
+            return ByteView(b=self.b[f:])
         return ByteView(s=self.s[f:])
-
-    def Copy(self, dest):
-        if self.b:
-            dest.extend(self.b)
-        dest.extend(list(self.s))
 
     def Equal(self, b2):
         if not b2.b: return self.EqualString(b2.s)
@@ -55,12 +47,12 @@ class ByteView:
         l = self.Len()
         if len(s) != l:
             return False
-        return ''.join(map(str, self.b)) == s
+        return self.b.decode() == s
 
     def EqualBytes(self, b2):
         if self.b:
-            return ''.join(map(str, self.b)) == ''.join(map(str, b2))
+            return self.b.decode() == b2.decode()
         l = self.Len()
         if len(b2) != l:
             return False
-        return self.s == ''.join(map(str, b2))
+        return self.s == b2.decode()

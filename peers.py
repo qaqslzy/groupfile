@@ -1,37 +1,32 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/9'
+port = None
 
-from abc import ABCMeta, abstractmethod
+def portPicker(g):
+    global port
+    return port
 
-
-portPicker = None
-
-
-class ProtoGetter(metaclass=ABCMeta):
-    @abstractmethod
+class ProtoGetter():
     def Get(self, ctx, req, resp):
         pass
 
 
-class PeerPicker(metaclass=ABCMeta):
-    @abstractmethod
+class PeerPicker():
     def PickPeer(self, key):
         pass
 
 
-class NoPeers(metaclass=PeerPicker):
+class NoPeers:
     def PickPeer(self, key):
         return None, None
 
 
-
-
-def RegisterPeerPicker(fn):
+def RegisterPeerPicker(p):
+    global port
     global portPicker
-    if portPicker:
-        # TODO rasie error rigister called more than once
-        pass
-    portPicker = fn
+    port = p
+    # if portPicker:
+    #     # TODO rasie error rigister called more than once
+    #     pass
+    # portPicker = lambda g: port
 
 
 def getPeers(groupName):
@@ -41,4 +36,4 @@ def getPeers(groupName):
     pk = portPicker(groupName)
     if not pk:
         pk = NoPeers()
-    return
+    return pk

@@ -1,5 +1,3 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/12'
 
 from threading import Condition, Lock
 

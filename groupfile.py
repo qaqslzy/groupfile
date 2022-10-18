@@ -1,6 +1,3 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/10'
-
 import peers
 from inspect import isfunction
 import singleflight.singleflight as singleflight
@@ -29,7 +26,7 @@ def newGroup(name, cacheBytes, getter, peers, adder, deleter):
         raise  # TODO error nil Getter
     mu.acquire()
     # initPeerServerOnce.run_once(print)()  # TODO callInitPeerServer
-    if groups[name]:
+    if name in groups:
         raise  # TODO duplicate registration of group name
     g = Group(name=name, getter=getter, adder=adder, deleter=deleter, peers=peers,
               lodaGroup=singleflight.Group())  # singleflight
@@ -114,7 +111,6 @@ class Group:
             if err:
                 self.Stats.LocalLoadErrs.Add(1)
             self.Stats.LocalLoads.Add(1)
-            self.populateCache(key, value, self.mainCache)
 
     def Get(self, ctx, key, dest):
         self.initPeers()
@@ -125,6 +121,7 @@ class Group:
             ctx = {'peer': self.peers.self}
 
         if not dest:
+            return
             # TODO raise nil dest sink
             pass
         value, cacheHit = self.lookupCache(key)
@@ -132,10 +129,10 @@ class Group:
         if cacheHit:
             self.Stats.CacheHits.Add(1)
             # setSinkView
-            return setSinkView(dest, value)
-
+            setSinkView(dest, value)
+            return None
         value, destPopulated, err = self.load(ctx, key, dest)
-        if not err:
+        if err is not None:
             return err
         if destPopulated:
             return None
@@ -181,23 +178,31 @@ class Group:
             return value, None
 
         viewi, err = self.loadGroup.Do(key, func)
-        if not err:
+        if err is None:
             return viewi, destPopulate[0], None
         return None, destPopulate[0], err
 
     def addFromPeer(self, ctx, peer, key, data):
-        # TODO req
-        pass
+        resp = {}
+        err = peer.Add(ctx, None, resp)
+        if not err:
+            return ByteView(), err
+        value = ByteView(b=resp['value'])
+        return value, None
 
     def deleteFromPeer(self, ctx, peer, key):
-        # TODO req
-        pass
+        resp = {}
+        err = peer.Delete(ctx, None, resp)
+        if not err:
+            return ByteView(), err
+        value = ByteView(b=resp['value'])
+        return value, None
 
     def getFromPeer(self, ctx, peer, key):
         req = {'group': self.name, 'key': key}
         resp = {}
         err = peer.Get(ctx, req, resp)  # TODO return resp
-        if not err:
+        if err is not None:
             return ByteView(), err
         value = ByteView(b=resp['value'])
         if random.randint(0, 9) == 0:
@@ -205,26 +210,25 @@ class Group:
         return value, None
 
     def deleteLocally(self, ctx, key):
-        err = self.deleter.Delete(ctx, key)
+        err = self.deleter(ctx, key)
         if not err:
             return err
         return None
 
     def addLocally(self, ctx, key, dest, data):
-        err = self.adder.Add(ctx, key, dest, data)
+        err = self.adder(ctx, key, dest, data)
         if not err:
             return ByteView(), err
         return dest.view(), None
 
     def getLocally(self, ctx, key, dest):
-        err = self.getter.Get(ctx, key, dest)
-        if not err:
+        err = self.getter(ctx, key, dest)
+        if err is not None:
             return ByteView(), err
         return dest.view()
 
     def populateCache(self, key, value, cache):
         cache.add(key, value)
-        # TODO Evict items from cache(s) if necessary
 
 
 class AtomicInt:

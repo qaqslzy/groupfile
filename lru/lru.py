@@ -1,6 +1,3 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/11'
-
 
 class entry:
     def __init__(self, key=None, value=None):
@@ -16,7 +13,9 @@ class Cache:
         self.cache = {}  # map[key]entry
 
     def Add(self, key, value):
-        ee = self.cache[key]
+        ee = None
+        if key in self.cache:
+            ee = self.cache[key]
         if ee:
             self.llMoveToFront(ee)
             ee.value = value
@@ -31,14 +30,18 @@ class Cache:
         self.ll.insert(0, self.ll.pop(self.ll.index(ele)))
 
     def Get(self, key):
-        ele = self.cache[key]
+        ele = None
+        if key in self.cache:
+            ele = self.cache[key]
         if ele:
             self.llMoveToFront(ele)
             return ele.value, True
         return None, False
 
     def Remove(self, key):
-        ele = self.cache[key]
+        ele = None
+        if key in self.cache:
+            ele = self.cache[key]
         if ele:
             self.removeElement(ele)
 

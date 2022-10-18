@@ -1,75 +1,74 @@
+import os
+
 import numpy
-from AES import AES, getK
+# from AES import AES as myAES, getK, strToKey, keyToStr
 import struct
-from SHA512 import sha512
+# from SHA512 import sha512
 
-class FileCode:
+import os, random, struct
+from Crypto.Cipher import AES
 
-    def encodeFile(self, filepath, K):
-        aes = AES()
-        with open(filepath, "rb") as f:
-           block_list = []
-           while True:
-              block = list(f.read(16))
-              if not block:
-                 break
-              yu = len(block) % 16
-              if yu != 0:
-                 bu = [0 for i in range(16 - yu)]
-                 block = block + bu
-              block = numpy.array(block).reshape(4, -1)
-              # print("block", block)
-              block = aes.encode(block, K).tolist()
-              block_list.append(block)
-           block_list = numpy.array(block_list).reshape(1, -1)[0]
-           # print("block_list", block_list)
-           return block_list
-
-    def decodeFile(self, filepath, K, code_list):
-        aes = AES()
-        with open(filepath, "wb") as f:
-            block_num = int(code_list.shape[0] / 16)
-            for i in range(block_num):
-                block = code_list[i * 16:i * 16 + 16].reshape(4, 4)
-                block = aes.decode(block, K)
-                # print("decode block", block)
-                block = block.reshape(1, -1)[0]
-                for x in block:
-                    f.write(struct.pack('B', x))
-
-    def sha512File(self, filepath):
-        """
-        将文件以二进制读出，并进行信息摘要
-        :param filepath: 文件地址
-        :return: 摘要
-        """
-        with open(filepath, "rb") as f:
-            content = list(f.read())
-            digest = sha512(content)
-            return digest
+try:
+    from Crypto.Util.Padding import pad, unpad
+except ImportError:
+    from Crypto.Util.py3compat import bchr, bord
 
 
-if __name__ == '__main__':
-
-    K = getK()   # 随机获取K用于AES加密
-
-    print(K)
-    filecode = FileCode()
-
-    digest = filecode.sha512File("log.txt")     # 对文件进行摘要
-    print(digest)
-
-    code = filecode.encodeFile("log.txt", K)    # 文件AES加密  生成加密后的序列
-    # print("code", code)
-
-    filecode.decodeFile("log1.txt", K, code)     # 文件解密  生成解密后的文件
+    def pad(data_to_pad, block_size):
+        padding_len = block_size - len(data_to_pad) % block_size
+        padding = bchr(padding_len) * padding_len
+        return data_to_pad + padding
 
 
+    def unpad(padded_data, block_size):
+        pdata_len = len(padded_data)
+        if pdata_len % block_size:
+            raise ValueError("Input data is not padded")
+        padding_len = bord(padded_data[-1])
+        if padding_len < 1 or padding_len > min(block_size, pdata_len):
+            raise ValueError("Padding is incorrect.")
+        if padded_data[-padding_len:] != bchr(padding_len) * padding_len:
+            raise ValueError("PKCS#7 padding is incorrect.")
+        return padded_data[:-padding_len]
 
 
+def encrypt_file(key, data, chunksize=64 * 1024):
+    iv = os.urandom(16)
+    encryptor = AES.new(key, AES.MODE_CBC, iv)
+    filesize = len(data)
+    out = bytes()
+    out += struct.pack('<Q', filesize)
+    out += iv
+    pos = 0
+    while pos < filesize:
+        if pos + chunksize < len(data):
+            chunk = data[pos:chunksize]
+        else:
+            chunk = data[pos:]
+            chunk = pad(chunk, AES.block_size)
+        pos += len(chunk)
+        out += encryptor.encrypt(chunk)
+    return out
 
 
-
-
-
+def decrypt_file(key, data, chunksize=64 * 1024):
+    filesize = struct.unpack('<Q', data[:8])[0]
+    iv = data[8:24]
+    data = data[24:]
+    encryptor = AES.new(key, AES.MODE_CBC, iv)
+    encrypted_filesize = len(data)
+    out = bytes()
+    pos = 0
+    while pos < encrypted_filesize:
+        if pos + chunksize < len(data):
+            chunk = data[pos:chunksize]
+            pos += len(chunk)
+            chunk = encryptor.decrypt(chunk)
+        else:
+            chunk = data[pos:]
+            pos += len(chunk)
+            chunk = encryptor.decrypt(chunk)
+            chunk = unpad(chunk, AES.block_size)
+        out +=chunk
+    return out
 

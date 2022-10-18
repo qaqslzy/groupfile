@@ -1,5 +1,3 @@
-__author__ = 'liuweiyi'
-__time__ = '2021/11/10'
 from functools import wraps
 
 class Once:
